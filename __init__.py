@@ -90,7 +90,6 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         user_fileversion_prop = bpy.context.preferences.addons[__name__].preferences.user_fileversion_prop
 
         # get folder + filename
-        #root_Folder = bpy.data.filepath.replace("\\","\\").split("\\")
         root_Folder = bpy.data.filepath.split("\\")
         root_filename = root_Folder[-1]
         root_Folder.remove(root_filename)
@@ -117,37 +116,21 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         version_isolate = f"{filename_clue}_snap-v"
         snap_filename = f"{snap_Folder}\\{version_isolate}001.{snap_ext}" 
         snap_version = "001"
-        
-        # # get version from the folder
-        # if len(snap_files) > 0:
-        #     for filename in snap_files:
-        #         if f"{filename_clue}_snap-" in filename:
-        #             filename_without_ext = filename.replace(version_isolate, "").split(".")
-        #             last_version = int(filename_without_ext[0])
-        #             snap_version = str(last_version + 1).zfill(3)
-        #             snap_filename = f"{snap_Folder}\\{version_isolate}{snap_version}.blend"
 
         # get version from the file
         if 'Snapshots_History' in bpy.data.texts.keys():
             snap_history = bpy.data.texts['Snapshots_History']
             snap_history_1st_line = bpy.data.texts['Snapshots_History'].lines[0].body
             last_version = int(snap_history_1st_line.replace("--","").split(":")[-1].replace("v",""))
-            #snap_version = str(last_version + 1).zfill(3)
             snap_version = str(last_version).zfill(3)
             snap_filename = f"{snap_Folder}\\{version_isolate}{snap_version}.{snap_ext}"
 
-            #print(snap_history_1st_line)
-
-       
         
         original_file = bpy.data.filepath
         if user_snap_type_props == "Save then Copy Main File": # save current file
             bpy.ops.wm.save_mainfile()
         
         copyfile(original_file, snap_filename) # copy file      
-        
-        #bpy.ops.wm.save_as_mainfile(filepath=snap_filename, copy=True)
-        
 
         #add history informations
         snap_text = 'Snapshots_History'
@@ -213,14 +196,12 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
             target_directory = root_Folder
 
             file_path = create_versioned_file(original_filename, version, target_directory)
-            #print(f"File created: {file_path}")
 
             ## clean previous versions
             # List to store matching files
             matching_files = []
             # Scan the directory for files
             for filename in os.listdir(target_directory):
-                #print(filename)
                 # Check if the file contains the original_filename and its extension starts with clue
                 if original_filename in filename and filename.split(clue[0])[-1].startswith(clue[1]):
                     if str(filename).split(clue[0])[-1] == f"{clue[1]}{version}":
@@ -293,10 +274,6 @@ def unregister():
     for keymap, keymapitem in addon_keymaps:
         keymap.keymap_items.remove(keymapitem)
     addon_keymaps.clear()
-
-# ## dunno why but should be
-# if __name__ == "__main__":
-#     register()
 
 if __name__ == "__main__":
     register()
