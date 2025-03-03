@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,0,95)
+    "version": (1,0,971)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -42,10 +42,17 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
     user_snap_type_props: bpy.props.EnumProperty(items = snap_options,name = "Snap type",description = "choose selection type",default=1)
     user_snap_folder : bpy.props.StringProperty(name="Snapshot Folder", default=f"//{snap_folder}\\")
     user_snap_extension : bpy.props.StringProperty(name="Snapshot extension", default=".blendsnap",description = "blendsnap files can be read as blender files, but they won't be scaned in the asset browser")
-    user_updateoutputpath : bpy.props.BoolProperty(name="Update output path", default=False, description = "if you own the set output path addon, it will automatically update it")
-    user_updateoutputnodes : bpy.props.BoolProperty(name="Update output nodes", default=False, description = "if you own the view layers addon, it will automatically update it")
     user_commentpref : bpy.props.BoolProperty(name="Add a comment", default=True, description = "allow the user to add a comment for the current version")
     user_fileversion_prop : bpy.props.BoolProperty(name="Create version file", default=False, description = "create a fake version file in the same folder as the original file, to know which version we are")
+
+    user_updateoutputpath : bpy.props.BoolProperty(name="Update output path", default=False, description = "if you own the set output path addon, it will automatically update it")
+    user_updateoutputnodes : bpy.props.BoolProperty(name="Update output nodes", default=False, description = "if you own the view layers addon, it will automatically update it")
+    update_scene_opt = [
+                        ("Opened Scene","Opened Scene","Opened Scene",0),
+                        ("All Scenes","All Scenes","All Scenes",1),
+                        ]
+    update_scene_prop: bpy.props.EnumProperty(items = update_scene_opt,name = "Update :",description = "Update scenes",default=1)
+
 
     def draw(self, context):
         layout = self.layout
@@ -58,14 +65,23 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
         row = layout.row()
         row.prop(self, "user_snap_extension")
         row = layout.row()
-        for addon in bpy.context.preferences.addons.keys():
-            if "set_output_path" in addon:
-                row.prop(self, "user_updateoutputpath")
-            if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon:
-                row.prop(self, "user_updateoutputnodes")
-        row = layout.row()
         row.prop(self, "user_fileversion_prop")
         row = layout.row()
+        new_box = False
+        for addon in bpy.context.preferences.addons.keys():
+            if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon or "set_output_path" in addon:
+                new_box = True      
+        if new_box:
+            box = layout.box()
+            row = box.row()
+            for addon in bpy.context.preferences.addons.keys():
+                if "set_output_path" in addon:
+                    row.prop(self, "user_updateoutputpath")
+                if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon:
+                    row.prop(self, "user_updateoutputnodes")
+            row = box.row()
+            row.prop(self, "update_scene_prop")
+            
         
 
 # create operator UPPER_OT_lower and idname = upper.lower    
@@ -88,6 +104,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         user_updateoutputnodes = bpy.context.preferences.addons[__name__].preferences.user_updateoutputnodes
         user_commentpref = bpy.context.preferences.addons[__name__].preferences.user_commentpref
         user_fileversion_prop = bpy.context.preferences.addons[__name__].preferences.user_fileversion_prop
+        update_scene_prop = bpy.context.preferences.addons[__name__].preferences.update_scene_prop
 
         # get folder + filename
         root_Folder = bpy.data.filepath.split("\\")
@@ -219,13 +236,26 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         if user_snap_type_props == "Copy Main File then Save": # save current file
             bpy.ops.wm.save_mainfile()
 
+        current_scene = bpy.context.window.scene # store current scene
         ## update output path
         if user_updateoutputpath:
-            bpy.ops.render.setoutputpath()
+            if update_scene_prop=="All Scenes": 
+                for scene in bpy.data.scenes: 
+                    bpy.context.window.scene = scene
+                    bpy.ops.render.setoutputpath()
+                    bpy.context.window.scene = current_scene
+            else:
+                bpy.ops.render.setoutputpath()
 
         ## update output view layers
         if user_updateoutputnodes:
-            bpy.ops.vltoolbox.createnodesoutput()
+            if update_scene_prop=="All Scenes": 
+                for scene in bpy.data.scenes: 
+                    bpy.context.window.scene = scene
+                    bpy.ops.vltoolbox.createnodesoutput()
+                    bpy.context.window.scene = current_scene
+            else:
+                bpy.ops.vltoolbox.createnodesoutput()
 
         # reset the comment
         self.text_input = ""
