@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,0,971)
+    "version": (1,0,972)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -237,6 +237,8 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
             bpy.ops.wm.save_mainfile()
 
         current_scene = bpy.context.window.scene # store current scene
+        current_layer = bpy.context.window.view_layer # store current view layer
+
         ## update output path
         if user_updateoutputpath:
             if update_scene_prop=="All Scenes": 
@@ -254,6 +256,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                     bpy.context.window.scene = scene
                     bpy.ops.vltoolbox.createnodesoutput()
                     bpy.context.window.scene = current_scene
+                    bpy.context.window.view_layer = current_layer
             else:
                 bpy.ops.vltoolbox.createnodesoutput()
 
