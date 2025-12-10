@@ -7,13 +7,24 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,1,33)
+    "version": (1,1,42)
 }
 
 # get addon name and version to use them automaticaly in the addon
 Addon_Name = str(bl_info["name"])
 Addon_Version = str(bl_info["version"])
 Addon_Version = Addon_Version[1:8].replace(",",".")
+
+'''
+update rebrancher ancienne version
++ si nom de fichier .blendsnap
++ si snapshot file > 
+    ++ récupère le fichier qui est à la racine
+    ++ copier le fichier à la racine dans le dossier snap
+    ++ passer à la version +1
+    ++ sauver la version .blendsnap sur le fichier à la racine
+
+''' 
 
 # import modules
 import bpy
@@ -44,20 +55,20 @@ def get_snapfolder():
     if not os.path.exists(snap_Folder):
         os.makedirs(snap_Folder)
 
-    print(f'{snap_Folder=}')
+    #print(f'{snap_Folder=}')
     return snap_Folder
 
 # get version from the file
 def get_version():
     snap_version = '001'
-    print(bpy.context.preferences.addons[__name__].preferences.get_version_prop)
+    #print(bpy.context.preferences.addons[__name__].preferences.get_version_prop)
 
     if bpy.context.preferences.addons[__name__].preferences.get_version_prop == 'Snap Folder':
         snap_Folder = get_snapfolder()
         root_Folder = bpy.data.filepath.split("\\")
         root_filename = root_Folder[-1]
         root_filename = root_filename.replace('.blend', '')
-        print(f'{root_filename=}')
+        #print(f'{root_filename=}')
         # Trouver les versions disponibles
         versions_list = []
         for snapfile in os.listdir(snap_Folder):
@@ -67,7 +78,7 @@ def get_version():
                 num_version = int(snapfile.split('.')[0].split('-')[-1][1:])
                 versions_list.append(num_version)
         # Extraire la dernière version
-        print(f'{versions_list=}')
+        #print(f'{versions_list=}')
         if versions_list:
             snap_version = str(max(versions_list)+1).zfill(3)
 
@@ -79,7 +90,7 @@ def get_version():
         else:
             snap_version = str(1).zfill(3)
 
-    print(f'{snap_version=}')
+    #print(f'{snap_version=}')
     return snap_version
 
 # define menu
@@ -101,6 +112,7 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
     user_snap_extension : bpy.props.StringProperty(name="Snapshot extension", default=".blendsnap",description = "blendsnap files can be read as blender files, but they won't be scaned in the asset browser")
     user_commentpref : bpy.props.BoolProperty(name="Add a comment", default=True, description = "allow the user to add a comment for the current version")
     user_fileversion_prop : bpy.props.BoolProperty(name="Create version file", default=True, description = "create a fake version file in the same folder as the original file, to know which version we are")
+    user_compression_pref : bpy.props.BoolProperty(name="Compressed files", default=True,description = "if checked, snapd files and current file will be compressed")
 
     user_updateoutputpath : bpy.props.BoolProperty(name="Update output path", default=True, description = "if you own the set output path addon, it will automatically update it")
     user_updateoutputnodes : bpy.props.BoolProperty(name="Update output nodes", default=False, description = "if you own the view layers addon, it will automatically update it")
@@ -123,6 +135,7 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
         row.prop(self, "user_commentpref")
         row = layout.row()
         row.prop(self, "user_snap_type_props")
+        row.prop(self, "user_compression_pref")
         row = layout.row()
         row.prop(self, "user_snap_folder")
         row = layout.row()
@@ -170,6 +183,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         user_commentpref = bpy.context.preferences.addons[__name__].preferences.user_commentpref
         user_fileversion_prop = bpy.context.preferences.addons[__name__].preferences.user_fileversion_prop
         update_scene_prop = bpy.context.preferences.addons[__name__].preferences.update_scene_prop
+        user_compression_pref = bpy.context.preferences.addons[__name__].preferences.user_compression_pref
 
         if bpy.data.filepath != '':
             snap_Folder = get_snapfolder()
@@ -200,7 +214,9 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
             
             original_file = bpy.data.filepath
             if user_snap_type_props == "Save then Copy Main File": # save current file
-                bpy.ops.wm.save_mainfile()
+                bpy.ops.wm.save_mainfile(
+                                        compress=user_compression_pref    
+                                        )
             
             copyfile(original_file, snap_filename) # copy file      
 
@@ -285,7 +301,9 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
 
             ## save file if user wants
             if user_snap_type_props == "Copy Main File then Save": # save current file
-                bpy.ops.wm.save_mainfile()
+                bpy.ops.wm.save_mainfile(
+                                        compress=user_compression_pref    
+                                        )
 
             current_scene = bpy.context.window.scene # store current scene
             current_layer = bpy.context.window.view_layer # store current view layer
