@@ -178,12 +178,23 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         user_snap_type_props = bpy.context.preferences.addons[__name__].preferences.user_snap_type_props
         user_snap_folder = bpy.context.preferences.addons[__name__].preferences.user_snap_folder
         user_snap_extension = bpy.context.preferences.addons[__name__].preferences.user_snap_extension
-        user_updateoutputpath = bpy.context.preferences.addons[__name__].preferences.user_updateoutputpath
-        user_updateoutputnodes = bpy.context.preferences.addons[__name__].preferences.user_updateoutputnodes
+        
+        
         user_commentpref = bpy.context.preferences.addons[__name__].preferences.user_commentpref
         user_fileversion_prop = bpy.context.preferences.addons[__name__].preferences.user_fileversion_prop
         update_scene_prop = bpy.context.preferences.addons[__name__].preferences.update_scene_prop
         user_compression_pref = bpy.context.preferences.addons[__name__].preferences.user_compression_pref
+        
+        ## check if another addons are in user addons
+        for addon in bpy.context.preferences.addons.keys():
+            if "set_output_path" in addon:
+                user_updateoutputpath = bpy.context.preferences.addons[__name__].preferences.user_updateoutputpath
+            else:
+                user_updateoutputpath = False
+            if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon:
+                user_updateoutputnodes = bpy.context.preferences.addons[__name__].preferences.user_updateoutputnodes
+            else:
+                user_updateoutputnodes = False
 
         if bpy.data.filepath != '':
             snap_Folder = get_snapfolder()
