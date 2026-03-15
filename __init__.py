@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,1,42)
+    "version": (1,2,12)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -31,7 +31,9 @@ import bpy
 import os
 from socket import gethostname
 from shutil import copyfile
-from re import compile
+from pathlib import Path
+from datetime import datetime
+from sys import platform
 
 # define global variables
 debug_mode = False
@@ -41,21 +43,18 @@ snap_folder = "Snap_Files"
 snap_text = 'Snapshots_History'
 
 def get_snapfolder():
-    # get folder + filename
-    root_Folder_split = bpy.data.filepath.split("\\")
-    root_filename = root_Folder_split[-1]
-    root_Folder_split.remove(root_filename)
-    root_Folder = "\\".join(root_Folder_split)
+    root_filename = os.path.basename(bpy.data.filepath)
+    root_folder = os.path.dirname(bpy.data.filepath)
     if bpy.context.preferences.addons[__name__].preferences.user_snap_folder[:2] == "//":
         cleaned_user_snap_folder = bpy.context.preferences.addons[__name__].preferences.user_snap_folder.replace("//","").replace("\\","")
         # create snapshot folder
-        snap_Folder = os.path.join(root_Folder, cleaned_user_snap_folder)
+        snap_Folder = os.path.join(root_folder, cleaned_user_snap_folder)
     else:
         snap_Folder = bpy.context.preferences.addons[__name__].preferences.user_snap_folder
     if not os.path.exists(snap_Folder):
         os.makedirs(snap_Folder)
 
-    #print(f'{snap_Folder=}')
+    print(f'{snap_Folder=}')
     return snap_Folder
 
 # get version from the file
@@ -161,7 +160,6 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
             row.prop(self, "update_scene_prop")
             
         
-
 # create operator UPPER_OT_lower and idname = upper.lower    
 class FILE_OT_snapshotfiles(bpy.types.Operator):
     bl_idname = 'file.snapshotfiles'
@@ -197,31 +195,36 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                 user_updateoutputnodes = False
 
         if bpy.data.filepath != '':
-            snap_Folder = get_snapfolder()
+            snap_Folder = Path(get_snapfolder())
 
-            root_Folder_split = bpy.data.filepath.split("\\")
-            root_filename = root_Folder_split[-1]
-            root_Folder_split.remove(root_filename)
-            root_Folder = "\\".join(root_Folder_split)
+
+            # root_Folder_split = bpy.data.filepath.split("\\")
+            # root_filename = root_Folder_split[-1]
+            # root_Folder_split.remove(root_filename)
+            # root_Folder = "\\".join(root_Folder_split)
+
+            root_filename = os.path.basename(bpy.data.filepath)
+            root_folder = os.path.dirname(bpy.data.filepath)
             
             #get current time and date
-            from datetime import datetime
             now = datetime.now()
 
             #define snapshot filename
-            snap_files = os.listdir(path = snap_Folder)
+            # snap_files = os.listdir(path = snap_Folder)
 
             snap_ext = user_snap_extension.replace(".","")
             filename_clue = root_filename.replace('.blend', '')
-            version_isolate = f"{filename_clue}_snap-v"
-            snap_filename = f"{snap_Folder}\\{version_isolate}001.{snap_ext}" 
-            snap_version = "001"
+            filename_snapped = f"{filename_clue}_snap-v"
+            
 
-            # get version from the file
+            ## get version from the file
             if snap_text in bpy.data.texts.keys():
                 snap_version = get_version()
-                snap_filename = f"{snap_Folder}\\{version_isolate}{snap_version}.{snap_ext}"
-
+            else:
+                snap_version = "001"
+            snapfile_name = f"{filename_snapped}{snap_version}.{snap_ext}"
+            print(f"{snapfile_name=}")
+            snap_filepath = snap_Folder.joinpath(snapfile_name)
             
             original_file = bpy.data.filepath
             if user_snap_type_props == "Save then Copy Main File": # save current file
@@ -229,7 +232,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                                         compress=user_compression_pref    
                                         )
             
-            copyfile(original_file, snap_filename) # copy file      
+            copyfile(original_file, snap_filepath) # copy file      
 
             #add history informations
             TextsListe = bpy.data.texts.keys()
@@ -259,7 +262,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                 user_comment = "None"
 
             bpy.data.texts[snap_text].cursor_set(3)
-            SnapHistoryText.write(f"Last snapshot made by: {os.getlogin()} \n user comment: {user_comment} \n on: {gethostname()} \n version: Blender {blender_version} \n the: {date_time} \n >>> {snap_filename}")
+            SnapHistoryText.write(f"Last snapshot made by: {os.getlogin()} \n user comment: {user_comment} \n on: {gethostname()} ({platform}) \n version: Blender {blender_version} \n the: {date_time} \n >>> {snap_filepath}")
 
             ## create a fake file version file
             if user_fileversion_prop:
@@ -288,7 +291,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                 #original_filename = filename_clue
                 original_filename = root_filename
                 version = str(int(snap_version) + 1).zfill(3)
-                target_directory = root_Folder
+                target_directory = root_folder
 
                 file_path = create_versioned_file(original_filename, version, target_directory)
 
@@ -343,7 +346,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
             # reset the comment
             self.text_input = ''#f'v{get_version()} to v{str(int(get_version())+1).zfill(3)}'
 
-            print('snapshot saved :' + snap_filename)
+            print(f"snapshot saved : {str(snap_filepath)}")
             print(f"\n {separator} {Addon_Name} - {Addon_Version} Finished {separator} \n")
             
             return {"FINISHED"}
