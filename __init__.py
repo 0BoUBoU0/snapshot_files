@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,2,12)
+    "version": (1,2,13)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -42,55 +42,6 @@ separator = "-" * 20
 snap_folder = "Snap_Files"
 snap_text = 'Snapshots_History'
 
-def get_snapfolder():
-    root_filename = os.path.basename(bpy.data.filepath)
-    root_folder = os.path.dirname(bpy.data.filepath)
-    if bpy.context.preferences.addons[__name__].preferences.user_snap_folder[:2] == "//":
-        cleaned_user_snap_folder = bpy.context.preferences.addons[__name__].preferences.user_snap_folder.replace("//","").replace("\\","")
-        # create snapshot folder
-        snap_Folder = os.path.join(root_folder, cleaned_user_snap_folder)
-    else:
-        snap_Folder = bpy.context.preferences.addons[__name__].preferences.user_snap_folder
-    if not os.path.exists(snap_Folder):
-        os.makedirs(snap_Folder)
-
-    print(f'{snap_Folder=}')
-    return snap_Folder
-
-# get version from the file
-def get_version():
-    snap_version = '001'
-    #print(bpy.context.preferences.addons[__name__].preferences.get_version_prop)
-
-    if bpy.context.preferences.addons[__name__].preferences.get_version_prop == 'Snap Folder':
-        snap_Folder = get_snapfolder()
-        root_Folder = bpy.data.filepath.split("\\")
-        root_filename = root_Folder[-1]
-        root_filename = root_filename.replace('.blend', '')
-        #print(f'{root_filename=}')
-        # Trouver les versions disponibles
-        versions_list = []
-        for snapfile in os.listdir(snap_Folder):
-            #print(snapfile)
-            #match = motif.match(snapfile)
-            if snapfile.startswith(root_filename) and snapfile.endswith(".blendsnap"):
-                num_version = int(snapfile.split('.')[0].split('-')[-1][1:])
-                versions_list.append(num_version)
-        # Extraire la dernière version
-        #print(f'{versions_list=}')
-        if versions_list:
-            snap_version = str(max(versions_list)+1).zfill(3)
-
-    elif bpy.context.preferences.addons[__name__].preferences.get_version_prop == 'Snapshot History':
-        if snap_text in bpy.data.texts.keys():
-            snap_history_1st_line = bpy.data.texts[snap_text].lines[0].body
-            last_version = int(snap_history_1st_line.replace("--","").split(":")[-1].replace("v",""))
-            snap_version = str(last_version).zfill(3)
-        else:
-            snap_version = str(1).zfill(3)
-
-    #print(f'{snap_version=}')
-    return snap_version
 
 # define menu
 def snapshotFiles_menu_draw(self,context):
@@ -119,13 +70,13 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
                         ("Opened Scene","Opened Scene","Opened Scene",0),
                         ("All Scenes","All Scenes","All Scenes",1),
                         ]
-    update_scene_prop: bpy.props.EnumProperty(items = update_scene_opt,name = "Update :",description = "Update scenes",default=1)
+    update_scene_prop: bpy.props.EnumProperty(items = update_scene_opt,name = "Update",description = "Update scenes",default=1)
 
     get_version_opt = [
                         ("Snapshot History","Snapshot History","Snapshot History",0),
                         ("Snap Folder","Snap Folder","Snap Folder",1),
                         ]
-    get_version_prop: bpy.props.EnumProperty(items = get_version_opt,name = "Version method :",description = "how getting version number",default=1)
+    get_version_prop: bpy.props.EnumProperty(items = get_version_opt,name = "Version method",description = "how getting version number",default=1)
 
 
     def draw(self, context):
@@ -158,8 +109,60 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
                     row.prop(self, "user_updateoutputnodes")
             row = box.row()
             row.prop(self, "update_scene_prop")
-            
-        
+
+
+# region FUNCTIONS
+def get_snapfolder():
+    blend_filename = os.path.basename(bpy.data.filepath)
+    blend_folder = os.path.dirname(bpy.data.filepath)
+    if bpy.context.preferences.addons[__name__].preferences.user_snap_folder[:2] == "//":
+        cleaned_user_snap_folder = bpy.context.preferences.addons[__name__].preferences.user_snap_folder.replace("//","").replace("\\","")
+        # create snapshot folder
+        snap_Folder = os.path.join(blend_folder, cleaned_user_snap_folder)
+    else:
+        snap_Folder = bpy.context.preferences.addons[__name__].preferences.user_snap_folder
+    if not os.path.exists(snap_Folder):
+        os.makedirs(snap_Folder)
+
+    print(f'{snap_Folder=}')
+    return snap_Folder
+
+
+# get version from the file
+def get_version():
+    snap_version = '001'
+    # if folder method
+    if bpy.context.preferences.addons[__name__].preferences.get_version_prop == 'Snap Folder':
+        #print("folder method")
+        snap_Folder = get_snapfolder()
+        blend_filename = str(os.path.basename(bpy.data.filepath)).split(".")[0] # get name without extension
+        blend_folder = os.path.dirname(bpy.data.filepath)
+        ## find all snap existing for the file
+        versions_list = []
+        for file in os.listdir(snap_Folder):
+            file_name = str(os.path.basename(file))
+            #print(f"{blend_filename=}")
+            #print(f"{file_name=}")
+            if file_name.startswith(blend_filename) and file_name.endswith(bpy.context.preferences.addons[__name__].preferences.user_snap_extension):
+                num_version = int(file_name.split('.')[0].split('-')[-1][1:])
+                versions_list.append(num_version)
+        # get last snap version
+        if versions_list:
+            snap_version = str(max(versions_list)+1).zfill(3)
+    # if history method
+    elif bpy.context.preferences.addons[__name__].preferences.get_version_prop == 'Snapshot History':
+        #print("history method")
+        if snap_text in bpy.data.texts.keys():
+            snap_history_1st_line = bpy.data.texts[snap_text].lines[0].body
+            last_version = int(snap_history_1st_line.replace("--","").split(":")[-1].replace("v",""))
+            snap_version = str(last_version).zfill(3)
+        else:
+            snap_version = str(1).zfill(3)
+    print(f'{snap_version=}')
+    return snap_version
+
+
+# region OPERATOR
 # create operator UPPER_OT_lower and idname = upper.lower    
 class FILE_OT_snapshotfiles(bpy.types.Operator):
     bl_idname = 'file.snapshotfiles'
@@ -197,14 +200,8 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         if bpy.data.filepath != '':
             snap_Folder = Path(get_snapfolder())
 
-
-            # root_Folder_split = bpy.data.filepath.split("\\")
-            # root_filename = root_Folder_split[-1]
-            # root_Folder_split.remove(root_filename)
-            # root_Folder = "\\".join(root_Folder_split)
-
-            root_filename = os.path.basename(bpy.data.filepath)
-            root_folder = os.path.dirname(bpy.data.filepath)
+            blend_filename = os.path.basename(bpy.data.filepath)
+            blend_folder = os.path.dirname(bpy.data.filepath)
             
             #get current time and date
             now = datetime.now()
@@ -213,7 +210,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
             # snap_files = os.listdir(path = snap_Folder)
 
             snap_ext = user_snap_extension.replace(".","")
-            filename_clue = root_filename.replace('.blend', '')
+            filename_clue = blend_filename.replace('.blend', '')
             filename_snapped = f"{filename_clue}_snap-v"
             
 
@@ -289,9 +286,9 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
 
                 # variables
                 #original_filename = filename_clue
-                original_filename = root_filename
+                original_filename = blend_filename
                 version = str(int(snap_version) + 1).zfill(3)
-                target_directory = root_folder
+                target_directory = blend_folder
 
                 file_path = create_versioned_file(original_filename, version, target_directory)
 
