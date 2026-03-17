@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,2,13)
+    "version": (1,2,14)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -124,7 +124,7 @@ def get_snapfolder():
     if not os.path.exists(snap_Folder):
         os.makedirs(snap_Folder)
 
-    print(f'{snap_Folder=}')
+    #print(f'{snap_Folder=}')
     return snap_Folder
 
 
@@ -158,7 +158,7 @@ def get_version():
             snap_version = str(last_version).zfill(3)
         else:
             snap_version = str(1).zfill(3)
-    print(f'{snap_version=}')
+    #print(f'{snap_version=}')
     return snap_version
 
 
