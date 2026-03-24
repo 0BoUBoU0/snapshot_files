@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,2,14)
+    "version": (1,3,11)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -49,7 +49,7 @@ def snapshotFiles_menu_draw(self,context):
 
 
 ## define addon preferences
-class SnapshotFilesPreferences(bpy.types.AddonPreferences):
+class SNAPSHOTFILES_preferences(bpy.types.AddonPreferences):
     bl_idname = __name__
 
     snap_options = [
@@ -110,6 +110,9 @@ class SnapshotFilesPreferences(bpy.types.AddonPreferences):
             row = box.row()
             row.prop(self, "update_scene_prop")
 
+
+class SNAPSHOTFILES_properties(bpy.types.PropertyGroup):
+    file_version : bpy.props.StringProperty(name="",default="001",description="current file version")
 
 # region FUNCTIONS
 def get_snapfolder():
@@ -307,6 +310,9 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                         matching_files.append(filename)
                 #print("Matching files:", matching_files)
 
+            ## fill scene property
+            for scene in bpy.data.scenes:
+                setattr(scene.sop_props, "file_version", snap_version)
 
             del snap_version
 
@@ -357,7 +363,8 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
 # list all classes
 classes = (
     FILE_OT_snapshotfiles,
-    SnapshotFilesPreferences,
+    SNAPSHOTFILES_properties,
+    SNAPSHOTFILES_preferences,
     )
 
 # create keymap list
@@ -368,6 +375,7 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file.append(snapshotFiles_menu_draw)
+    bpy.types.Scene.sop_props = bpy.props.PointerProperty (type = SNAPSHOTFILES_properties)
     # add keymap
     if bpy.context.window_manager.keyconfigs.addon:
         keymap = bpy.context.window_manager.keyconfigs.addon.keymaps.new(name="Window", space_type="EMPTY")
@@ -383,6 +391,7 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     bpy.types.TOPBAR_MT_file.remove(snapshotFiles_menu_draw)
+    del bpy.types.Scene.mrs_props
     # remove keymap
     for keymap, keymapitem in addon_keymaps:
         keymap.keymap_items.remove(keymapitem)
