@@ -1,13 +1,13 @@
 bl_info = {
     "name": "Snapshot Files",
-    "author": 'Yannick "Boubou" Castaing',
+    "author": 'Yannick -BoUBoU- Castaing',
     "description": "make a snapshot of your main file",
     "location": "File menu",
     "doc_url": "",
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,3,3)
+    "version": (1,3,32)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -98,7 +98,7 @@ class SNAPSHOTFILES_preferences(bpy.types.AddonPreferences):
         row = layout.row()
         new_box = False
         for addon in bpy.context.preferences.addons.keys():
-            if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon or "set_output_path" in addon:
+            if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon or "set_output_path" in addon or "view_layers_outputs" in addon:
                 new_box = True      
         if new_box:
             box = layout.box()
@@ -163,7 +163,7 @@ def get_version():
         else:
             snap_version = str(1).zfill(3)
     elif bpy.context.preferences.addons[__name__].preferences.get_version_prop == 'Scene Property':
-        snap_version = bpy.context.scene.sop_props.file_version[1:]
+        snap_version = bpy.context.scene.snapshotfiles_props.file_version[1:]
     #print(f'{snap_version=}')
     return snap_version
 
@@ -192,16 +192,16 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
         update_scene_prop = bpy.context.preferences.addons[__name__].preferences.update_scene_prop
         user_compression_pref = bpy.context.preferences.addons[__name__].preferences.user_compression_pref
         
-        # ## check if another addons are in user addons
-        # for addon in bpy.context.preferences.addons.keys():
-        #     if "set_output_path" in addon:
-        #         user_updateoutputpath = bpy.context.preferences.addons[__name__].preferences.user_updateoutputpath
-        #     else:
-        #         user_updateoutputpath = False
-        #     if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon:
-        #         user_updateoutputnodes = bpy.context.preferences.addons[__name__].preferences.user_updateoutputnodes
-        #     else:
-        #         user_updateoutputnodes = False
+        ## check if another addons are in user addons >> important security because the addon has to be present AND checked
+        for addon in bpy.context.preferences.addons.keys():
+            if "set_output_path" in addon:
+                user_updateoutputpath = bpy.context.preferences.addons[__name__].preferences.user_updateoutputpath
+            else:
+                user_updateoutputpath = False
+            if "view_layers_toolbox" in addon or "viewlayers_toolbox" in addon:
+                user_updateoutputnodes = bpy.context.preferences.addons[__name__].preferences.user_updateoutputnodes
+            else:
+                user_updateoutputnodes = False
 
         if bpy.data.filepath != '':
             snap_Folder = Path(get_snapfolder())
@@ -313,7 +313,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
 
             ## fill scene property
             for scene in bpy.data.scenes:
-                setattr(scene.sop_props, "file_version", f"v{new_version}")
+                setattr(scene.snapshotfiles_props, "file_version", f"v{new_version}")
 
             del snap_version
 
@@ -329,7 +329,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
             current_layer = bpy.context.window.view_layer # store current view layer
 
             ## update output path
-            if bpy.context.preferences.addons[__name__].preferences.user_updateoutputpath:
+            if user_updateoutputpath:
                 # print("update output path")
                 if update_scene_prop=="All Scenes": 
                     for scene in bpy.data.scenes: 
@@ -340,7 +340,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                     bpy.ops.render.setoutputpath()
 
             ## update output view layers
-            if bpy.context.preferences.addons[__name__].preferences.user_updateoutputnodes:
+            if user_updateoutputnodes:
                 # print("update node output")
                 if update_scene_prop=="All Scenes":
                     for scene in bpy.data.scenes: 
@@ -381,7 +381,7 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file.append(snapshotFiles_menu_draw)
-    bpy.types.Scene.sop_props = bpy.props.PointerProperty (type = SNAPSHOTFILES_properties)
+    bpy.types.Scene.snapshotfiles_props = bpy.props.PointerProperty (type = SNAPSHOTFILES_properties)
     # add keymap
     if bpy.context.window_manager.keyconfigs.addon:
         keymap = bpy.context.window_manager.keyconfigs.addon.keymaps.new(name="Window", space_type="EMPTY")
