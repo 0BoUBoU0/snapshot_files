@@ -12,8 +12,7 @@ bl_info = {
 
 # get addon name and version to use them automaticaly in the addon
 Addon_Name = str(bl_info["name"])
-Addon_Version = str(bl_info["version"])
-Addon_Version = Addon_Version[1:8].replace(",",".")
+Addon_Version = '. '.join([str(n) for n in bl_info["version"]])
 
 '''
 update rebrancher ancienne version
@@ -37,7 +36,6 @@ from datetime import datetime
 from sys import platform
 
 # define global variables
-debug_mode = False
 separator = "-" * 20
 
 snap_folder = "Snap_Files"
@@ -398,7 +396,6 @@ def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     bpy.types.TOPBAR_MT_file.remove(snapshotFiles_menu_draw)
-    del bpy.types.Scene.mrs_props
     # remove keymap
     for keymap, keymapitem in addon_keymaps:
         keymap.keymap_items.remove(keymapitem)
@@ -406,6 +403,3 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-
-    # test call
-    bpy.ops.object.simple_operator('INVOKE_DEFAULT')
