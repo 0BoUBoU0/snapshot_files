@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "General",
     "blender": (2,90,0),
-    "version": (1,3,32)
+    "version": (1,3,4)
 }
 
 # get addon name and version to use them automaticaly in the addon
@@ -29,6 +29,7 @@ update rebrancher ancienne version
 # import modules
 import bpy
 import os
+from getpass import getuser
 from socket import gethostname
 from shutil import copyfile
 from pathlib import Path
@@ -263,7 +264,7 @@ class FILE_OT_snapshotfiles(bpy.types.Operator):
                 user_comment = "None"
 
             bpy.data.texts[snap_text].cursor_set(3)
-            SnapHistoryText.write(f"Last snapshot made by: {os.getlogin()} \n user comment: {user_comment} \n on: {gethostname()} ({platform}) \n Blender version: Blender {blender_version} \n the: {date_time} \n version based on: {bpy.context.preferences.addons[__name__].preferences.get_version_prop} \n >>> {snap_filepath}")
+            SnapHistoryText.write(f"Last snapshot made by: {getuser()} \n user comment: {user_comment} \n on: {gethostname()} ({platform}) \n Blender version: Blender {blender_version} \n the: {date_time} \n version based on: {bpy.context.preferences.addons[__name__].preferences.get_version_prop} \n >>> {snap_filepath}")
 
             ## create a fake file version file
             if user_fileversion_prop:
